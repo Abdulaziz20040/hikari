@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Finance App",
+  title: "Hikari",
   description: "Moliyaviy boshqaruv uchun Next.js ilovasi",
+  icons: {
+    icon: "https://i.pinimg.com/736x/ed/e6/4c/ede64c636b9e4892a462dd6f76f1d07d.jpg", // public/logo.jpg
+  },
 };
 
 export default function RootLayout({ children }) {
