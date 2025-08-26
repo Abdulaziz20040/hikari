@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import TabBar from "../components/TabBar"; // ✅ TabBar komponentini chaqiramiz
+import TabBar from "../components/TabBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,12 +19,12 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="uz">
+    <html lang="uz" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white`}
       >
-        <div className="pb-20">{children}</div> {/* ✅ Sahifa kontenti */}
-        <TabBar /> {/* ✅ Doimiy TabBar */}
+        <div className="pb-20">{children}</div>
+        <TabBar />
       </body>
     </html>
   );

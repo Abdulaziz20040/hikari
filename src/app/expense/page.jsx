@@ -1,43 +1,26 @@
 "use client";
-
-import React, { useState } from "react";
-import { TrendingDown, Plus, Calendar, Clock, Filter, ChevronDown } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { TrendingDown, Plus, Calendar, Filter, MoreVertical, Trash2 } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import "../../app/globals.css";
 
 const ExpensePage = () => {
+    const API_URL = "https://2921e26836d273ac.mokky.dev/chiqim";
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showFilterModal, setShowFilterModal] = useState(false);
-    const [newExpense, setNewExpense] = useState({ amount: '', description: '', category: 'Oziq-ovqat' });
+    const [newExpense, setNewExpense] = useState({ amount: '', description: '' });
     const [filters, setFilters] = useState({
         dateRange: 'Barchasi',
-        timeRange: 'Barchasi',
-        category: 'Barchasi',
-        amountRange: 'Barchasi'
+        customDate: null
     });
+    const [openMenuId, setOpenMenuId] = useState(null); // ✅ Menu boshqarish uchun state
 
-    const [expenses, setExpenses] = useState([
-        { id: 1, amount: 450000, description: 'Supermarket xaridlari', category: 'Oziq-ovqat', date: '2024-08-25', time: '19:30' },
-        { id: 2, amount: 35000, description: 'Taksi haqi', category: 'Transport', date: '2024-08-25', time: '14:20' },
-        { id: 3, amount: 180000, description: 'Elektr energiya', category: 'Kommunal', date: '2024-08-24', time: '10:15' },
-        { id: 4, amount: 850000, description: 'Krossovka sotib olish', category: 'Kiyim-kechak', date: '2024-08-23', time: '16:45' },
-        { id: 5, amount: 125000, description: 'Dorixona', category: 'Tibbiyot', date: '2024-08-22', time: '11:30' },
-        { id: 6, amount: 75000, description: 'Kino teatr', category: 'O\'yin-kulgi', date: '2024-08-21', time: '20:00' },
-        { id: 7, amount: 200000, description: 'Kitoblar', category: 'Ta\'lim', date: '2024-08-20', time: '13:15' },
-        { id: 8, amount: 90000, description: 'Kafe', category: 'Oziq-ovqat', date: '2024-08-19', time: '18:30' }
-    ]);
+    const [expenses, setExpenses] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const categories = ['Barchasi', 'Oziq-ovqat', 'Transport', 'Kommunal', 'Kiyim-kechak', 'Tibbiyot', 'O\'yin-kulgi', 'Ta\'lim', 'Boshqa'];
-
-    const dateRanges = [
-        'Barchasi', 'Bugun', 'Kecha', 'Bu hafta', 'O\'tgan hafta', 'Bu oy', 'O\'tgan oy'
-    ];
-
-    const timeRanges = [
-        'Barchasi', 'Ertalab (06:00-12:00)', 'Kunduzi (12:00-18:00)', 'Kechqurun (18:00-00:00)', 'Tunda (00:00-06:00)'
-    ];
-
-    const amountRanges = [
-        'Barchasi', 'Kam (0-100K)', 'O\'rta (100K-500K)', 'Ko\'p (500K-1M)', 'Juda ko\'p (1M+)'
-    ];
+    const dateRanges = ['Barchasi', 'Bugun', 'Kecha', 'Bu hafta', 'O\'tgan hafta', 'Bu oy', 'O\'tgan oy'];
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('uz-UZ', {
@@ -47,9 +30,45 @@ const ExpensePage = () => {
         }).format(amount);
     };
 
-    const getDateFilter = (expense, range) => {
+    // ✅ API'dan chiqimlarni olish
+    const fetchExpenses = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            setExpenses(data.reverse());
+        } catch (error) {
+            console.error("Ma'lumot olishda xatolik:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExpenses();
+    }, []);
+
+    // ✅ Chiqimni o‘chirish funksiyasi
+    const handleDeleteExpense = async (id) => {
+        try {
+            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+            setExpenses(expenses.filter(exp => exp.id !== id));
+            setOpenMenuId(null);
+        } catch (error) {
+            console.error("Chiqimni o‘chirishda xatolik:", error);
+        }
+    };
+
+
+    // ✅ Filtrlash
+    const getDateFilter = (expense, range, customDate) => {
         const today = new Date();
         const expenseDate = new Date(expense.date);
+
+        if (customDate) {
+            const custom = new Date(customDate);
+            return expenseDate.toDateString() === custom.toDateString();
+        }
 
         switch (range) {
             case 'Bugun':
@@ -79,76 +98,46 @@ const ExpensePage = () => {
         }
     };
 
-    const getTimeFilter = (expense, range) => {
-        if (range === 'Barchasi') return true;
-
-        const hour = parseInt(expense.time.split(':')[0]);
-        switch (range) {
-            case 'Ertalab (06:00-12:00)':
-                return hour >= 6 && hour < 12;
-            case 'Kunduzi (12:00-18:00)':
-                return hour >= 12 && hour < 18;
-            case 'Kechqurun (18:00-00:00)':
-                return hour >= 18 && hour < 24;
-            case 'Tunda (00:00-06:00)':
-                return hour >= 0 && hour < 6;
-            default:
-                return true;
-        }
-    };
-
-    const getAmountFilter = (expense, range) => {
-        const amount = expense.amount;
-        switch (range) {
-            case 'Kam (0-100K)':
-                return amount <= 100000;
-            case 'O\'rta (100K-500K)':
-                return amount > 100000 && amount <= 500000;
-            case 'Ko\'p (500K-1M)':
-                return amount > 500000 && amount <= 1000000;
-            case 'Juda ko\'p (1M+)':
-                return amount > 1000000;
-            default:
-                return true;
-        }
-    };
-
     const filteredExpenses = expenses.filter(expense => {
-        return getDateFilter(expense, filters.dateRange) &&
-            getTimeFilter(expense, filters.timeRange) &&
-            (filters.category === 'Barchasi' || expense.category === filters.category) &&
-            getAmountFilter(expense, filters.amountRange);
+        return getDateFilter(expense, filters.dateRange, filters.customDate);
     });
 
     const totalExpense = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-    const handleAddExpense = () => {
+    // ✅ Yangi chiqim qo‘shish
+    const handleAddExpense = async () => {
         if (newExpense.amount && newExpense.description) {
             const expense = {
-                id: Date.now(),
                 amount: parseInt(newExpense.amount),
                 description: newExpense.description,
-                category: newExpense.category,
                 date: new Date().toISOString().split('T')[0],
                 time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
             };
-            setExpenses([expense, ...expenses]);
-            setNewExpense({ amount: '', description: '', category: 'Oziq-ovqat' });
-            setShowAddModal(false);
+
+            try {
+                await fetch(API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(expense)
+                });
+                fetchExpenses();
+                setNewExpense({ amount: '', description: '' });
+                setShowAddModal(false);
+            } catch (error) {
+                console.error("Chiqim qo'shishda xatolik:", error);
+            }
         }
     };
 
     const resetFilters = () => {
         setFilters({
             dateRange: 'Barchasi',
-            timeRange: 'Barchasi',
-            category: 'Barchasi',
-            amountRange: 'Barchasi'
+            customDate: null
         });
         setShowFilterModal(false);
     };
 
-    const activeFiltersCount = Object.values(filters).filter(f => f !== 'Barchasi').length;
+    const activeFiltersCount = (filters.dateRange !== 'Barchasi' || filters.customDate) ? 1 : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pb-20">
@@ -183,54 +172,21 @@ const ExpensePage = () => {
                 </div>
             </div>
 
-            {/* Total Expense Card */}
+            {/* Total Expense */}
             <div className="p-6">
                 <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-3xl p-6 shadow-2xl">
-                    <div className="flex items-center space-x-3 mb-4">
-                        <TrendingDown size={28} className="text-red-200" />
-                        <span className="text-red-200 font-medium">
-                            {activeFiltersCount > 0 ? 'Filtrlangan chiqim' : 'Jami chiqim'}
-                        </span>
-                    </div>
-                    <h2 className="text-4xl font-bold text-white mb-2">{formatCurrency(totalExpense)}</h2>
+                    <h2 className="text-4xl font-bold text-white mb-2">
+                        {loading ? "Yuklanmoqda..." : formatCurrency(totalExpense)}
+                    </h2>
                     <p className="text-red-200">
                         {activeFiltersCount > 0 ?
                             `${filteredExpenses.length} ta filtrlangan tranzaksiya` :
-                            `Bu oyda ${expenses.length} ta tranzaksiya`
-                        }
+                            `Jami ${expenses.length} ta tranzaksiya`}
                     </p>
                 </div>
             </div>
 
-            {/* Active Filters Display */}
-            {activeFiltersCount > 0 && (
-                <div className="px-6 mb-4">
-                    <div className="flex flex-wrap gap-2">
-                        {Object.entries(filters).map(([key, value]) => {
-                            if (value === 'Barchasi') return null;
-                            return (
-                                <div key={key} className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm flex items-center space-x-2">
-                                    <span>{value}</span>
-                                    <button
-                                        onClick={() => setFilters({ ...filters, [key]: 'Barchasi' })}
-                                        className="hover:text-blue-300"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
-                            );
-                        })}
-                        <button
-                            onClick={resetFilters}
-                            className="text-gray-400 hover:text-gray-300 text-sm underline"
-                        >
-                            Barchasini tozalash
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Expense List */}
+            {/* List */}
             <div className="px-6 mb-8">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-200">Chiqimlar ro'yxati</h3>
@@ -252,7 +208,10 @@ const ExpensePage = () => {
                 ) : (
                     <div className="space-y-3">
                         {filteredExpenses.map((expense) => (
-                            <div key={expense.id} className="bg-gray-800/50 rounded-2xl p-4 hover:bg-gray-800/70 transition-colors">
+                            <div
+                                key={expense.id}
+                                className="relative bg-gray-800/50 rounded-2xl p-4 hover:bg-gray-800/70 transition-colors"
+                            >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-3">
                                         <div className="p-2 bg-red-500/20 rounded-xl">
@@ -261,19 +220,37 @@ const ExpensePage = () => {
                                         <div>
                                             <h4 className="font-medium text-white">{expense.description}</h4>
                                             <div className="flex items-center space-x-2 text-sm text-gray-400">
-                                                <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-lg text-xs">
-                                                    {expense.category}
-                                                </span>
-                                                <span>•</span>
                                                 <span>{expense.date}</span>
                                                 <span>{expense.time}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-lg font-semibold text-red-400">
-                                        -{formatCurrency(expense.amount)}
+                                    <div className="flex items-center space-x-2">
+                                        <div className="text-lg font-semibold text-red-400">
+                                            -{formatCurrency(expense.amount)}
+                                        </div>
+                                        {/* Menu Trigger */}
+                                        <button
+                                            onClick={() => setOpenMenuId(openMenuId === expense.id ? null : expense.id)}
+                                            className="p-2 rounded-xl hover:bg-gray-700"
+                                        >
+                                            <MoreVertical size={20} className="text-gray-300" />
+                                        </button>
                                     </div>
                                 </div>
+
+                                {/* Dropdown Menu */}
+                                {openMenuId === expense.id && (
+                                    <div className="absolute right-4 top-14 bg-gray-900 border border-gray-700 rounded-xl shadow-lg w-40 z-50">
+                                        <button
+                                            onClick={() => handleDeleteExpense(expense.id)}
+                                            className="flex items-center space-x-2 w-full px-4 py-2 text-red-500 hover:bg-gray-800 rounded-t-xl"
+                                        >
+                                            <Trash2 size={16} />
+                                            <span>O‘chirish</span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -285,7 +262,7 @@ const ExpensePage = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
                     <div className="w-full bg-gray-900 rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white">Filterlar</h3>
+                            <h3 className="text-xl font-bold text-white">Filtr</h3>
                             <button
                                 onClick={() => setShowFilterModal(false)}
                                 className="p-2 bg-gray-800 rounded-xl hover:bg-gray-700 transition-colors"
@@ -295,7 +272,7 @@ const ExpensePage = () => {
                         </div>
 
                         <div className="space-y-6">
-                            {/* Date Filter */}
+                            {/* Sana bo'yicha */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center space-x-2">
                                     <Calendar size={16} />
@@ -305,7 +282,7 @@ const ExpensePage = () => {
                                     {dateRanges.map((range) => (
                                         <button
                                             key={range}
-                                            onClick={() => setFilters({ ...filters, dateRange: range })}
+                                            onClick={() => setFilters({ ...filters, dateRange: range, customDate: null })}
                                             className={`p-3 rounded-xl text-sm font-medium transition-all ${filters.dateRange === range
                                                 ? 'bg-blue-500 text-white'
                                                 : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -317,64 +294,15 @@ const ExpensePage = () => {
                                 </div>
                             </div>
 
-                            {/* Time Filter */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center space-x-2">
-                                    <Clock size={16} />
-                                    <span>Vaqt bo'yicha</span>
-                                </label>
-                                <div className="space-y-2">
-                                    {timeRanges.map((range) => (
-                                        <button
-                                            key={range}
-                                            onClick={() => setFilters({ ...filters, timeRange: range })}
-                                            className={`w-full p-3 rounded-xl text-sm font-medium transition-all text-left ${filters.timeRange === range
-                                                ? 'bg-purple-500 text-white'
-                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                                }`}
-                                        >
-                                            {range}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Category Filter */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-3">Kategoriya</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {categories.map((category) => (
-                                        <button
-                                            key={category}
-                                            onClick={() => setFilters({ ...filters, category: category })}
-                                            className={`p-3 rounded-xl text-sm font-medium transition-all ${filters.category === category
-                                                ? 'bg-red-500 text-white'
-                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                                }`}
-                                        >
-                                            {category}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Amount Filter */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-3">Miqdor bo'yicha</label>
-                                <div className="space-y-2">
-                                    {amountRanges.map((range) => (
-                                        <button
-                                            key={range}
-                                            onClick={() => setFilters({ ...filters, amountRange: range })}
-                                            className={`w-full p-3 rounded-xl text-sm font-medium transition-all text-left ${filters.amountRange === range
-                                                ? 'bg-yellow-500 text-white'
-                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                                }`}
-                                        >
-                                            {range}
-                                        </button>
-                                    ))}
-                                </div>
+                            {/* Calendar */}
+                            <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Maxsus sana</label>
+                                <DatePicker
+                                    selected={filters.customDate}
+                                    onChange={(date) => setFilters({ ...filters, customDate: date, dateRange: 'Barchasi' })}
+                                    dateFormat="yyyy-MM-dd"
+                                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white"
+                                />
                             </div>
                         </div>
 
@@ -399,7 +327,7 @@ const ExpensePage = () => {
             {/* Add Expense Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
-                    <div className="w-full bg-gray-900 rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300">
+                    <div className="w-full bg-gray-900 rounded-t-3xl p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-white">Chiqim qo'shish</h3>
                             <button
@@ -411,47 +339,26 @@ const ExpensePage = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">Miqdor</label>
-                                <input
-                                    type="number"
-                                    placeholder="Chiqim miqdorini kiriting"
-                                    value={newExpense.amount}
-                                    onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
-                                    className="w-full p-4 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">Tavsif</label>
-                                <input
-                                    type="text"
-                                    placeholder="Chiqim haqida ma'lumot"
-                                    value={newExpense.description}
-                                    onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                                    className="w-full p-4 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">Kategoriya</label>
-                                <select
-                                    value={newExpense.category}
-                                    onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                                    className="w-full p-4 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                                >
-                                    {categories.slice(1).map((category) => (
-                                        <option key={category} value={category}>{category}</option>
-                                    ))}
-                                </select>
-                            </div>
-
+                            <input
+                                type="number"
+                                placeholder="Miqdor"
+                                value={newExpense.amount}
+                                onChange={(e) => setNewExpense({ ...newExpense, amount: e.target.value })}
+                                className="w-full p-3 bg-gray-800 rounded-xl text-white"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Tavsif"
+                                value={newExpense.description}
+                                onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
+                                className="w-full p-3 bg-gray-800 rounded-xl text-white"
+                            />
                             <button
                                 onClick={handleAddExpense}
                                 disabled={!newExpense.amount || !newExpense.description}
                                 className="w-full bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-xl font-semibold text-white hover:from-red-600 hover:to-red-700 transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed"
                             >
-                                Chiqim qo'shish
+                                Qo'shish
                             </button>
                         </div>
                     </div>
