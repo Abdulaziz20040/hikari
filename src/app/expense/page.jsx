@@ -1,6 +1,16 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingDown, Plus, Calendar, Filter, MoreVertical, Trash2 } from 'lucide-react';
+import {
+    TrendingDown,
+    Plus,
+    Calendar,
+    Filter,
+    MoreVertical,
+    Trash2,
+    Tag,
+    ChevronDown,
+    Loader2
+} from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import "../../app/globals.css";
@@ -10,17 +20,30 @@ const ExpensePage = () => {
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showFilterModal, setShowFilterModal] = useState(false);
-    const [newExpense, setNewExpense] = useState({ amount: '', description: '' });
+    const [newExpense, setNewExpense] = useState({
+        amount: '',
+        description: '',
+        category: 'kundalik ehtyoj'
+    });
     const [filters, setFilters] = useState({
         dateRange: 'Barchasi',
-        customDate: null
+        customDate: null,
+        category: 'Barchasi'
     });
-    const [openMenuId, setOpenMenuId] = useState(null); // ✅ Menu boshqarish uchun state
-
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [isOpen, setIsOpen] = useState(false); // Dropdown uchun
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const dateRanges = ['Barchasi', 'Bugun', 'Kecha', 'Bu hafta', 'O\'tgan hafta', 'Bu oy', 'O\'tgan oy'];
+
+    const categories = [
+        { value: "kundalik ehtyoj", label: "Kundalik ehtiyoj" },
+        { value: "kompaniya", label: "Kompaniya" },
+        { value: "uzum market", label: "Uzum Market" },
+        { value: "ehson", label: "Ehson" },
+        { value: "soliq", label: "Soliq" }
+    ];
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('uz-UZ', {
@@ -48,7 +71,7 @@ const ExpensePage = () => {
         fetchExpenses();
     }, []);
 
-    // ✅ Chiqimni o‘chirish funksiyasi
+    // ✅ Chiqimni o‘chirish
     const handleDeleteExpense = async (id) => {
         try {
             await fetch(`${API_URL}/${id}`, { method: "DELETE" });
@@ -58,7 +81,6 @@ const ExpensePage = () => {
             console.error("Chiqimni o‘chirishda xatolik:", error);
         }
     };
-
 
     // ✅ Filtrlash
     const getDateFilter = (expense, range, customDate) => {
@@ -99,17 +121,20 @@ const ExpensePage = () => {
     };
 
     const filteredExpenses = expenses.filter(expense => {
-        return getDateFilter(expense, filters.dateRange, filters.customDate);
+        const matchDate = getDateFilter(expense, filters.dateRange, filters.customDate);
+        const matchCategory = filters.category === 'Barchasi' || expense.category === filters.category;
+        return matchDate && matchCategory;
     });
 
     const totalExpense = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
 
     // ✅ Yangi chiqim qo‘shish
     const handleAddExpense = async () => {
-        if (newExpense.amount && newExpense.description) {
+        if (newExpense.amount && newExpense.description && newExpense.category) {
             const expense = {
                 amount: parseInt(newExpense.amount),
                 description: newExpense.description,
+                category: newExpense.category,
                 date: new Date().toISOString().split('T')[0],
                 time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
             };
@@ -121,7 +146,7 @@ const ExpensePage = () => {
                     body: JSON.stringify(expense)
                 });
                 fetchExpenses();
-                setNewExpense({ amount: '', description: '' });
+                setNewExpense({ amount: '', description: '', category: 'kundalik ehtyoj' });
                 setShowAddModal(false);
             } catch (error) {
                 console.error("Chiqim qo'shishda xatolik:", error);
@@ -132,15 +157,23 @@ const ExpensePage = () => {
     const resetFilters = () => {
         setFilters({
             dateRange: 'Barchasi',
-            customDate: null
+            customDate: null,
+            category: 'Barchasi'
         });
         setShowFilterModal(false);
     };
 
-    const activeFiltersCount = (filters.dateRange !== 'Barchasi' || filters.customDate) ? 1 : 0;
+    const activeFiltersCount = (filters.dateRange !== 'Barchasi' || filters.customDate || filters.category !== 'Barchasi') ? 1 : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pb-20">
+            {/* ✅ Loading */}
+            {loading && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50">
+                    <Loader2 className="animate-spin text-emerald-500" size={48} />
+                </div>
+            )}
+
             {/* Header */}
             <div className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800">
                 <div className="flex items-center justify-between p-6">
@@ -222,6 +255,7 @@ const ExpensePage = () => {
                                             <div className="flex items-center space-x-2 text-sm text-gray-400">
                                                 <span>{expense.date}</span>
                                                 <span>{expense.time}</span>
+                                                <span className="capitalize text-[12px] text-red-400 absolute top-0 left-4">{expense.category}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -294,6 +328,37 @@ const ExpensePage = () => {
                                 </div>
                             </div>
 
+                            {/* Kategoriya bo'yicha */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center space-x-2">
+                                    <Tag size={16} />
+                                    <span>Kategoriya</span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setFilters({ ...filters, category: 'Barchasi' })}
+                                        className={`p-3 rounded-xl text-sm font-medium transition-all ${filters.category === 'Barchasi'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                            }`}
+                                    >
+                                        Barchasi
+                                    </button>
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat.value}
+                                            onClick={() => setFilters({ ...filters, category: cat.value })}
+                                            className={`p-3 rounded-xl text-sm font-medium transition-all ${filters.category === cat.value
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                                }`}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Calendar */}
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Maxsus sana</label>
@@ -302,6 +367,7 @@ const ExpensePage = () => {
                                     onChange={(date) => setFilters({ ...filters, customDate: date, dateRange: 'Barchasi' })}
                                     dateFormat="yyyy-MM-dd"
                                     className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white"
+                                    calendarClassName="bg-gray-900 text-white"
                                 />
                             </div>
                         </div>
@@ -353,15 +419,57 @@ const ExpensePage = () => {
                                 onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
                                 className="w-full p-3 bg-gray-800 rounded-xl text-white"
                             />
+
+                            {/* Category dropdown */}
+                            <div className="relative w-full">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Kategoriya</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsOpen(!isOpen)}
+                                    className="w-full flex justify-between items-center px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white font-medium shadow-md hover:border-emerald-400 transition duration-300"
+                                >
+                                    {newExpense.category ? (
+                                        <span>{categories.find((cat) => cat.value === newExpense.category)?.label}</span>
+                                    ) : (
+                                        <span className="text-gray-400">Tanlang</span>
+                                    )}
+                                    <ChevronDown className={`w-5 h-5 text-emerald-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+                                </button>
+
+                                {isOpen && (
+                                    <div className="absolute bottom-full mb-2 w-full bg-gray-900 border border-gray-700 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50">
+                                        {categories.map((cat) => (
+                                            <div
+                                                key={cat.value}
+                                                onClick={() => {
+                                                    setNewExpense({ ...newExpense, category: cat.value });
+                                                    setIsOpen(false);
+                                                }}
+                                                className="px-4 py-3 hover:bg-emerald-500/20 cursor-pointer text-white transition"
+                                            >
+                                                {cat.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <button
                                 onClick={handleAddExpense}
-                                disabled={!newExpense.amount || !newExpense.description}
+                                disabled={!newExpense.amount || !newExpense.description || !newExpense.category}
                                 className="w-full bg-gradient-to-r from-red-500 to-red-600 p-4 rounded-xl font-semibold text-white hover:from-red-600 hover:to-red-700 transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed"
                             >
                                 Qo'shish
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Loader */}
+            {loading && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50">
+                    <Loader2 className="animate-spin text-emerald-500" size={48} />
                 </div>
             )}
         </div>

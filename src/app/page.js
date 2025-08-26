@@ -13,16 +13,26 @@ import {
   Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import TabBar from "../components/TabBar";
-import "../app/globals.css"
+import "../app/globals.css";
+import { ChevronDown } from "lucide-react";
+
 
 const MobileHomePage = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [incomeData, setIncomeData] = useState([]);
+  const [expenseData, setExpenseData] = useState([]);
   const [incomeTotal, setIncomeTotal] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [selectedRange, setSelectedRange] = useState("Barchasi");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+
+  const ranges = ["Barchasi", "1-hafta", "1-oy", "2-oy", "3-oy"];
 
   const router = useRouter();
 
@@ -39,7 +49,10 @@ const MobileHomePage = () => {
       style: "currency",
       currency: "UZS",
       minimumFractionDigits: 0,
-    }).format(amount);
+    })
+      .format(amount)
+      .replace(/,/g, " "); // vergullarni bo'sh joy bilan almashtiramiz
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -49,37 +62,13 @@ const MobileHomePage = () => {
         fetch(EXPENSE_API),
       ]);
 
-      const incomeData = await incomeRes.json();
-      const expenseData = await expenseRes.json();
+      const incomeJson = await incomeRes.json();
+      const expenseJson = await expenseRes.json();
 
-      const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
-      const totalExpense = expenseData.reduce((sum, item) => sum + item.amount, 0);
+      setIncomeData(incomeJson);
+      setExpenseData(expenseJson);
 
-      setIncomeTotal(totalIncome);
-      setExpenseTotal(totalExpense);
-
-      const transactions = [
-        ...incomeData.map((item) => ({
-          id: `income-${item.id}`,
-          type: "income",
-          title: item.description || "Kirim",
-          amount: item.amount,
-          date: item.date || "",
-        })),
-        ...expenseData.map((item) => ({
-          id: `expense-${item.id}`,
-          type: "expense",
-          title: item.description || "Chiqim",
-          amount: item.amount,
-          date: item.date || "",
-        })),
-      ];
-
-      const sortedTransactions = transactions
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 5);
-
-      setRecentTransactions(sortedTransactions);
+      calculateTotals(incomeJson, expenseJson);
     } catch (error) {
       console.error("Ma'lumot olishda xatolik:", error);
     } finally {
@@ -87,9 +76,65 @@ const MobileHomePage = () => {
     }
   };
 
+  const calculateTotals = (income, expense) => {
+    let filteredIncome = [...income];
+    let filteredExpense = [...expense];
+
+    const now = new Date();
+    let startDate = null;
+
+    if (selectedRange !== "Barchasi") {
+      startDate = new Date();
+      if (selectedRange === "1-hafta") startDate.setDate(now.getDate() - 7);
+      if (selectedRange === "1-oy") startDate.setMonth(now.getMonth() - 1);
+      if (selectedRange === "2-oy") startDate.setMonth(now.getMonth() - 2);
+      if (selectedRange === "3-oy") startDate.setMonth(now.getMonth() - 3);
+    }
+
+    if (startDate) {
+      filteredIncome = filteredIncome.filter(
+        (item) => new Date(item.date) >= startDate
+      );
+      filteredExpense = filteredExpense.filter(
+        (item) => new Date(item.date) >= startDate
+      );
+    }
+
+    const totalIncome = filteredIncome.reduce((sum, i) => sum + i.amount, 0);
+    const totalExpense = filteredExpense.reduce((sum, i) => sum + i.amount, 0);
+
+    setIncomeTotal(totalIncome);
+    setExpenseTotal(totalExpense);
+
+    const transactions = [
+      ...filteredIncome.map((item) => ({
+        id: `income-${item.id}`,
+        type: "income",
+        title: item.description || "Kirim",
+        amount: item.amount,
+        date: item.date || "",
+      })),
+      ...filteredExpense.map((item) => ({
+        id: `expense-${item.id}`,
+        type: "expense",
+        title: item.description || "Chiqim",
+        amount: item.amount,
+        date: item.date || "",
+      })),
+    ]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5);
+
+    setRecentTransactions(transactions);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    calculateTotals(incomeData, expenseData);
+  }, [selectedRange]);
 
   const balance = incomeTotal - expenseTotal;
 
@@ -134,11 +179,45 @@ const MobileHomePage = () => {
         <div className="p-4 sm:p-6 max-w-lg mx-auto">
           <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-3xl p-5 sm:p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 relative">
                 <Wallet size={22} className="text-blue-200" />
-                <span className="text-sm sm:text-base text-blue-200 font-medium">
-                  Umumiy balans
-                </span>
+
+                {/* Custom Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center space-x-2 px-3 py-1.5 bg-white/10 backdrop-blur-lg border border-blue-400/30 rounded-xl text-blue-200 text-sm sm:text-base font-medium hover:bg-white/20 transition"
+                  >
+                    <span>{selectedRange}</span>
+                    <ChevronDown size={16} className="text-blue-200" />
+                  </button>
+
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute left-0 mt-2 w-40 bg-gray-900/95 backdrop-blur-xl border border-blue-400/20 rounded-xl shadow-xl overflow-hidden z-50"
+                    >
+                      {ranges.map((range) => (
+                        <button
+                          key={range}
+                          onClick={() => {
+                            setSelectedRange(range);
+                            setDropdownOpen(false);
+                          }}
+                          className={`block w-full text-left px-4 py-2 text-sm transition ${selectedRange === range
+                            ? "bg-blue-600/30 text-blue-300"
+                            : "text-gray-300 hover:bg-white/10 hover:text-blue-200"
+                            }`}
+                        >
+                          {range}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setShowBalance(!showBalance)}
@@ -147,8 +226,13 @@ const MobileHomePage = () => {
                 {showBalance ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
             </div>
+
             <div className="mb-6">
-              <h2
+              <motion.h2
+                key={balance}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
                 className="font-bold text-white mb-2 break-words"
                 style={{ fontSize: "clamp(1.8rem, 6vw, 2.5rem)" }}
               >
@@ -157,17 +241,24 @@ const MobileHomePage = () => {
                   : showBalance
                     ? formatCurrency(balance)
                     : "*** *** ***"}
-              </h2>
+              </motion.h2>
               <p className="text-blue-200 text-xs sm:text-sm">
-                Bu oyda +{loading ? "..." : formatCurrency(incomeTotal - expenseTotal)} o'sish
+                Davr foydasi: {loading ? "..." : formatCurrency(balance)}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
               {[
                 { label: "Kirim", value: incomeTotal, icon: TrendingUp, color: "text-emerald-300" },
                 { label: "Chiqim", value: expenseTotal, icon: TrendingDown, color: "text-red-300" },
               ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="bg-white/20 rounded-2xl p-3 sm:p-4">
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-white/20 rounded-2xl p-3 sm:p-4"
+                >
                   <div className="flex items-center space-x-2 mb-1 sm:mb-2">
                     <Icon size={18} className={color} />
                     <span className="text-xs sm:text-sm">{label}</span>
@@ -178,7 +269,7 @@ const MobileHomePage = () => {
                   >
                     {loading ? "..." : showBalance ? formatCurrency(value) : "***"}
                   </p>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>

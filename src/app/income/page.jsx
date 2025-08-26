@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Plus, Calendar, Filter, MoreVertical, Trash2 } from 'lucide-react';
+import {
+    TrendingUp, Plus, Calendar, Filter, MoreVertical, Trash2, Loader2, Tag,
+    ChevronDown
+} from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import "../../app/globals.css";
@@ -10,17 +13,36 @@ const IncomePage = () => {
 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showFilterModal, setShowFilterModal] = useState(false);
-    const [newIncome, setNewIncome] = useState({ amount: '', description: '' });
+    const [loading, setLoading] = useState(true);
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [isOpen, setIsOpen] = useState(false); // ✅ Dropdown uchun state
+
+
+
+
+    const [newIncome, setNewIncome] = useState({
+        amount: '',
+        description: '',
+        category: 'kundalik ehtyoj'
+    });
+
     const [filters, setFilters] = useState({
         dateRange: 'Barchasi',
-        customDate: null
+        customDate: null,
+        category: 'Barchasi'
     });
 
     const [incomes, setIncomes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [openMenuId, setOpenMenuId] = useState(null); // ✅ Qaysi card ochiq
 
     const dateRanges = ['Barchasi', 'Bugun', 'Kecha', 'Bu hafta', "O'tgan hafta", 'Bu oy', "O'tgan oy"];
+    const categories = [
+        { value: "kundalik ehtyoj", label: "Kundalik ehtiyoj" },
+        { value: "kompaniya", label: "Kompaniya" },
+        { value: "uzum market", label: "Uzum Market" },
+        { value: "ehson", label: "Ehson" },
+        { value: "soliq", label: "Soliq" }
+    ];
+
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('uz-UZ', {
@@ -51,9 +73,7 @@ const IncomePage = () => {
     // ✅ Delete funksiyasi
     const handleDeleteIncome = async (id) => {
         try {
-            await fetch(`${API_URL}/${id}`, {
-                method: "DELETE"
-            });
+            await fetch(`${API_URL}/${id}`, { method: "DELETE" });
             setIncomes(prev => prev.filter(item => item.id !== id));
             setOpenMenuId(null);
         } catch (error) {
@@ -67,8 +87,7 @@ const IncomePage = () => {
         const incomeDate = new Date(income.date);
 
         if (customDate) {
-            const custom = new Date(customDate);
-            return incomeDate.toDateString() === custom.toDateString();
+            return incomeDate.toDateString() === new Date(customDate).toDateString();
         }
 
         switch (range) {
@@ -100,17 +119,19 @@ const IncomePage = () => {
     };
 
     const filteredIncomes = incomes.filter(income => {
-        return getDateFilter(income, filters.dateRange, filters.customDate);
+        const matchDate = getDateFilter(income, filters.dateRange, filters.customDate);
+        const matchCategory = filters.category === 'Barchasi' || income.category === filters.category;
+        return matchDate && matchCategory;
     });
 
     const totalIncome = filteredIncomes.reduce((sum, income) => sum + income.amount, 0);
 
     // ✅ Miqdorni validatsiya qilish
     const handleAmountChange = (e) => {
-        let value = e.target.value.replace(/[^\d.]/g, ""); // faqat raqam va nuqta
+        let value = e.target.value.replace(/[^\d.]/g, "");
         const parts = value.split(".");
         if (parts.length > 2) {
-            value = parts[0] + "." + parts[1]; // faqat bitta nuqta
+            value = parts[0] + "." + parts[1];
         }
         setNewIncome({ ...newIncome, amount: value });
     };
@@ -121,6 +142,7 @@ const IncomePage = () => {
             const income = {
                 amount: parseFloat(newIncome.amount),
                 description: newIncome.description,
+                category: newIncome.category,
                 date: new Date().toISOString().split('T')[0],
                 time: new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })
             };
@@ -132,7 +154,7 @@ const IncomePage = () => {
                     body: JSON.stringify(income)
                 });
                 fetchIncomes();
-                setNewIncome({ amount: '', description: '' });
+                setNewIncome({ amount: '', description: '', category: 'kompaniya' });
                 setShowAddModal(false);
             } catch (error) {
                 console.error("Kirim qo'shishda xatolik:", error);
@@ -143,15 +165,24 @@ const IncomePage = () => {
     const resetFilters = () => {
         setFilters({
             dateRange: 'Barchasi',
-            customDate: null
+            customDate: null,
+            category: 'Barchasi'
         });
         setShowFilterModal(false);
     };
 
-    const activeFiltersCount = (filters.dateRange !== 'Barchasi' || filters.customDate) ? 1 : 0;
+    const activeFiltersCount =
+        (filters.dateRange !== 'Barchasi' || filters.customDate || filters.category !== 'Barchasi') ? 1 : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pb-20 overflow-y-auto no-scrollbar">
+            {/* ✅ Loading */}
+            {loading && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50">
+                    <Loader2 className="animate-spin text-emerald-500" size={48} />
+                </div>
+            )}
+
             {/* Header */}
             <div className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800">
                 <div className="flex items-center justify-between p-6">
@@ -224,7 +255,7 @@ const IncomePage = () => {
                                 className="bg-gray-800/50 rounded-2xl p-4 hover:bg-gray-800/70 transition-colors relative"
                             >
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
+                                    <div className="flex items-center space-x-3 mt-1">
                                         <div className="p-2 bg-emerald-500/20 rounded-xl">
                                             <TrendingUp size={20} className="text-emerald-400" />
                                         </div>
@@ -234,6 +265,8 @@ const IncomePage = () => {
                                                 <span>{income.date}</span>
                                                 <span>•</span>
                                                 <span>{income.time}</span>
+                                                <span>•</span>
+                                                <span className="capitalize text-[12px] text-emerald-400 absolute top-0 left-4">{income.category}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -261,7 +294,6 @@ const IncomePage = () => {
                                             <span>O'chirish</span>
                                         </button>
                                     </div>
-
                                 )}
                             </div>
                         ))}
@@ -269,7 +301,7 @@ const IncomePage = () => {
                 )}
             </div>
 
-            {/* Filter Modal */}
+            {/* ✅ Filter Modal */}
             {showFilterModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
                     <div className="w-full bg-gray-900 rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto">
@@ -306,6 +338,37 @@ const IncomePage = () => {
                                 </div>
                             </div>
 
+                            {/* Kategoriya bo'yicha */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center space-x-2">
+                                    <Tag size={16} />
+                                    <span>Kategoriya</span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setFilters({ ...filters, category: 'Barchasi' })}
+                                        className={`p-3 rounded-xl text-sm font-medium transition-all ${filters.category === 'Barchasi'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                            }`}
+                                    >
+                                        Barchasi
+                                    </button>
+                                    {categories.map((cat) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setFilters({ ...filters, category: cat })}
+                                            className={`p-3 rounded-xl text-sm font-medium capitalize transition-all ${filters.category === cat
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                                }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Calendar */}
                             <div className="mt-4">
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Maxsus sana</label>
@@ -337,7 +400,7 @@ const IncomePage = () => {
                 </div>
             )}
 
-            {/* Add Income Modal */}
+            {/* ✅ Add Income Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end">
                     <div className="w-full bg-gray-900 rounded-t-3xl p-6">
@@ -352,6 +415,7 @@ const IncomePage = () => {
                         </div>
 
                         <div className="space-y-4">
+                            {/* Miqdor */}
                             <input
                                 type="text"
                                 value={newIncome.amount}
@@ -360,6 +424,7 @@ const IncomePage = () => {
                                 className="w-full p-3 bg-gray-800 rounded-xl text-white"
                             />
 
+                            {/* Tavsif */}
                             <input
                                 type="text"
                                 placeholder="Tavsif"
@@ -367,9 +432,52 @@ const IncomePage = () => {
                                 onChange={(e) => setNewIncome({ ...newIncome, description: e.target.value })}
                                 className="w-full p-4 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             />
+
+                            <div className="relative w-full">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Kategoriya
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsOpen(!isOpen)}
+                                    className="w-full flex justify-between items-center px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white font-medium shadow-md hover:border-emerald-400 transition duration-300"
+                                >
+                                    {newIncome.category ? (
+                                        <span>
+                                            {categories.find((cat) => cat.value === newIncome.category)?.label}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400">Tanlang</span>
+                                    )}
+                                    <ChevronDown
+                                        className={`w-5 h-5 text-emerald-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""
+                                            }`}
+                                    />
+                                </button>
+
+                                {isOpen && (
+                                    <div className="absolute bottom-full mb-2 w-full bg-gray-900 border border-gray-700 rounded-xl shadow-lg overflow-hidden animate-fade-in-up z-50">
+                                        {categories.map((cat) => (
+                                            <div
+                                                key={cat.value}
+                                                onClick={() => {
+                                                    setNewIncome({ ...newIncome, category: cat.value });
+                                                    setIsOpen(false);
+                                                }}
+                                                className="px-4 py-3 hover:bg-emerald-500/20 cursor-pointer text-white transition"
+                                            >
+                                                {cat.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+
+                            {/* Qo‘shish tugmasi */}
                             <button
                                 onClick={handleAddIncome}
-                                disabled={!newIncome.amount || !newIncome.description}
+                                disabled={!newIncome.amount || !newIncome.description || !newIncome.category}
                                 className="w-full bg-gradient-to-r from-emerald-500 to-green-600 p-4 rounded-xl font-semibold text-white hover:from-emerald-600 hover:to-green-700 transition-all duration-300 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed"
                             >
                                 Qo'shish
