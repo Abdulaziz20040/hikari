@@ -308,7 +308,7 @@ const MobileHomePage = () => {
                       <p
                         className={`font-bold ${color} truncate`}
                         style={{
-                          fontSize: "clamp(1rem, 4vw, 1.5rem)",
+                          // fontSize: "clamp(1rem, 4vw, 1.5rem)",
                           maxWidth: '100%',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
