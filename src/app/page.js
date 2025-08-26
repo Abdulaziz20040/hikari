@@ -11,6 +11,7 @@ import {
   EyeOff,
   Bell,
   Search,
+  CreditCard
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -18,26 +19,40 @@ import TabBar from "../components/TabBar";
 import "../app/globals.css";
 import { ChevronDown } from "lucide-react";
 
-
 const MobileHomePage = () => {
   const [showBalance, setShowBalance] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [incomeData, setIncomeData] = useState([]);
   const [expenseData, setExpenseData] = useState([]);
+  const [debtsData, setDebtsData] = useState([]);
   const [incomeTotal, setIncomeTotal] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
+  const [debtsTotal, setDebtsTotal] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [selectedRange, setSelectedRange] = useState("Barchasi");
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-
   const ranges = ["Barchasi", "1-hafta", "1-oy", "2-oy", "3-oy"];
+
+  const [activeCard, setActiveCard] = useState(null);
+
+  const cards = [
+    { label: "Kirim", value: incomeTotal, icon: TrendingUp, color: "text-emerald-300" },
+    { label: "Chiqim", value: expenseTotal, icon: TrendingDown, color: "text-red-300" },
+    { label: "Qarzlar", value: debtsTotal, icon: CreditCard, color: "text-yellow-300" },
+  ];
+
+  const handleCardClick = (index) => {
+    setActiveCard(index);
+    setTimeout(() => setActiveCard(null), 4000); // 4 soniyadan keyin default holatga qaytadi
+  };
 
   const router = useRouter();
 
   const INCOME_API = "https://2921e26836d273ac.mokky.dev/kirim";
   const EXPENSE_API = "https://2921e26836d273ac.mokky.dev/chiqim";
+  const DEBTS_API = "https://2921e26836d273ac.mokky.dev/qarzlar";
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -51,24 +66,26 @@ const MobileHomePage = () => {
       minimumFractionDigits: 0,
     })
       .format(amount)
-      .replace(/,/g, " "); // vergullarni bo'sh joy bilan almashtiramiz
-
+      .replace(/,/g, " ");
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [incomeRes, expenseRes] = await Promise.all([
+      const [incomeRes, expenseRes, debtsRes] = await Promise.all([
         fetch(INCOME_API),
         fetch(EXPENSE_API),
+        fetch(DEBTS_API)
       ]);
 
       const incomeJson = await incomeRes.json();
       const expenseJson = await expenseRes.json();
+      const debtsJson = await debtsRes.json();
 
       setIncomeData(incomeJson);
       setExpenseData(expenseJson);
+      setDebtsData(debtsJson);
 
-      calculateTotals(incomeJson, expenseJson);
+      calculateTotals(incomeJson, expenseJson, debtsJson);
     } catch (error) {
       console.error("Ma'lumot olishda xatolik:", error);
     } finally {
@@ -76,9 +93,10 @@ const MobileHomePage = () => {
     }
   };
 
-  const calculateTotals = (income, expense) => {
+  const calculateTotals = (income, expense, debts) => {
     let filteredIncome = [...income];
     let filteredExpense = [...expense];
+    let filteredDebts = [...debts];
 
     const now = new Date();
     let startDate = null;
@@ -98,13 +116,18 @@ const MobileHomePage = () => {
       filteredExpense = filteredExpense.filter(
         (item) => new Date(item.date) >= startDate
       );
+      filteredDebts = filteredDebts.filter(
+        (item) => new Date(item.date) >= startDate
+      );
     }
 
     const totalIncome = filteredIncome.reduce((sum, i) => sum + i.amount, 0);
     const totalExpense = filteredExpense.reduce((sum, i) => sum + i.amount, 0);
+    const totalDebts = filteredDebts.reduce((sum, d) => sum + d.amount, 0);
 
     setIncomeTotal(totalIncome);
     setExpenseTotal(totalExpense);
+    setDebtsTotal(totalDebts);
 
     const transactions = [
       ...filteredIncome.map((item) => ({
@@ -121,6 +144,13 @@ const MobileHomePage = () => {
         amount: item.amount,
         date: item.date || "",
       })),
+      ...filteredDebts.map((item) => ({
+        id: `debt-${item.id}`,
+        type: "debt",
+        title: item.name || "Qarz",
+        amount: item.amount,
+        date: item.date || "",
+      }))
     ]
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 5);
@@ -133,16 +163,16 @@ const MobileHomePage = () => {
   }, []);
 
   useEffect(() => {
-    calculateTotals(incomeData, expenseData);
+    calculateTotals(incomeData, expenseData, debtsData);
   }, [selectedRange]);
 
   const balance = incomeTotal - expenseTotal;
 
   const quickActions = [
-    { icon: Plus, label: "Qo'shish", color: "bg-emerald-500", path: "/add" },
+    { icon: CreditCard, label: "Qarz", color: "bg-emerald-500", path: "/debts" },
     { icon: TrendingUp, label: "Kirim", color: "bg-blue-500", path: "/income" },
     { icon: TrendingDown, label: "Chiqim", color: "bg-red-500", path: "/expense" },
-    { icon: BarChart3, label: "Hisobot", color: "bg-purple-500", path: "/report" },
+    { icon: BarChart3, label: "Hisobot", color: "bg-purple-500", path: "/reports" },
   ];
 
   return (
@@ -247,31 +277,52 @@ const MobileHomePage = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-              {[
-                { label: "Kirim", value: incomeTotal, icon: TrendingUp, color: "text-emerald-300" },
-                { label: "Chiqim", value: expenseTotal, icon: TrendingDown, color: "text-red-300" },
-              ].map(({ label, value, icon: Icon, color }) => (
-                <motion.div
-                  key={label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="bg-white/20 rounded-2xl p-3 sm:p-4"
-                >
-                  <div className="flex items-center space-x-2 mb-1 sm:mb-2">
-                    <Icon size={18} className={color} />
-                    <span className="text-xs sm:text-sm">{label}</span>
-                  </div>
-                  <p
-                    className={`font-bold ${color} truncate`}
-                    style={{ fontSize: "clamp(1rem, 4vw, 1.5rem)" }}
-                  >
-                    {loading ? "..." : showBalance ? formatCurrency(value) : "***"}
-                  </p>
-                </motion.div>
-              ))}
+            <div className="overflow-x-auto py-2 no-scrollbar">
+              <div className="flex space-x-3 sm:space-x-4 relative">
+                {cards.map(({ label, value, icon: Icon, color }, index) => {
+                  const isActive = activeCard === index;
+                  const baseWidth = 120;
+                  const expandedWidth = 170; // click bo‘lganda kengayadigan width
+                  return (
+                    <motion.div
+                      key={label}
+                      onClick={() => handleCardClick(index)}
+                      whileHover={{ width: expandedWidth, transition: { duration: 0.8, ease: "easeInOut" } }}
+                      animate={{
+                        width: isActive ? expandedWidth : baseWidth,
+                        transition: { duration: 0.8, ease: "easeInOut" },
+                      }}
+                      className="bg-white/20 backdrop-blur-md rounded-2xl p-3 sm:p-4 cursor-pointer flex-shrink-0 relative overflow-hidden"
+                      style={{
+                        perspective: 1000,
+                        transformOrigin: "left",
+                        zIndex: isActive ? 10 : 1,
+                      }}
+                    >
+                      <div className="flex items-center space-x-2 mb-1 sm:mb-2">
+                        <Icon size={18} className={color} />
+                        <span className="text-xs sm:text-sm truncate" style={{ maxWidth: '80%' }}>
+                          {label}
+                        </span>
+                      </div>
+                      <p
+                        className={`font-bold ${color} truncate`}
+                        style={{
+                          fontSize: "clamp(1rem, 4vw, 1.5rem)",
+                          maxWidth: '100%',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {loading ? "..." : showBalance ? formatCurrency(value) : "***"}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
+
           </div>
         </div>
 
@@ -327,13 +378,17 @@ const MobileHomePage = () => {
                       <div
                         className={`p-2 rounded-xl ${transaction.type === "income"
                           ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-red-500/20 text-red-400"
+                          : transaction.type === "expense"
+                            ? "bg-red-500/20 text-red-400"
+                            : "bg-yellow-500/20 text-yellow-400"
                           }`}
                       >
                         {transaction.type === "income" ? (
                           <TrendingUp size={18} />
-                        ) : (
+                        ) : transaction.type === "expense" ? (
                           <TrendingDown size={18} />
+                        ) : (
+                          <CreditCard size={18} />
                         )}
                       </div>
                       <div>
@@ -347,10 +402,12 @@ const MobileHomePage = () => {
                       className="font-semibold text-right"
                       style={{
                         fontSize: "clamp(0.8rem, 3.5vw, 1.2rem)",
-                        color: transaction.type === "income" ? "#34d399" : "#f87171",
+                        color: transaction.type === "income" ? "#34d399" :
+                          transaction.type === "expense" ? "#f87171" : "#facc15",
                       }}
                     >
-                      {transaction.type === "income" ? "+" : "-"}
+                      {transaction.type === "income" ? "+" :
+                        transaction.type === "expense" ? "-" : "-"}
                       {formatCurrency(transaction.amount)}
                     </div>
                   </div>
