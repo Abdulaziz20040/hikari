@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Home, TrendingUp, TrendingDown, Briefcase } from "lucide-react";
+import { Home, TrendingUp, TrendingDown, Briefcase, CreditCard } from "lucide-react"; // CreditCard ikonasi qarzlar uchun
 import { usePathname, useRouter } from "next/navigation";
 
 const TabBar = () => {
@@ -13,6 +13,7 @@ const TabBar = () => {
         { path: "/income", icon: TrendingUp, label: "Kirim", color: "text-emerald-400" },
         { path: "/expense", icon: TrendingDown, label: "Chiqim", color: "text-red-400" },
         { path: "/reports", icon: Briefcase, label: "Ishlar", color: "text-purple-400" },
+        { path: "/debts", icon: CreditCard, label: "Qarzlar", color: "text-yellow-400" }, // yangi bo'lim
     ];
 
     return (
