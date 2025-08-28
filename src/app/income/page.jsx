@@ -175,7 +175,7 @@ const IncomePage = () => {
         (filters.dateRange !== 'Barchasi' || filters.customDate || filters.category !== 'Barchasi') ? 1 : 0;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pb-20 overflow-y-auto no-scrollbar">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pb-20 flex flex-col">
             {/* ✅ Loading */}
             {loading && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-md z-50">
@@ -184,7 +184,8 @@ const IncomePage = () => {
             )}
 
             {/* Header */}
-            <div className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800">
+            {/* Header */}
+            <div className="sticky top-0 z-40 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800 flex-shrink-0">
                 <div className="flex items-center justify-between p-6">
                     <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
@@ -214,91 +215,94 @@ const IncomePage = () => {
                 </div>
             </div>
 
-            {/* Total Income */}
-            <div className="p-6">
-                <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-3xl p-6 shadow-2xl">
-                    <h2 className="text-4xl font-bold text-white mb-2">
-                        {loading ? "Yuklanmoqda..." : formatCurrency(totalIncome)}
-                    </h2>
-                    <p className="text-emerald-200">
-                        {activeFiltersCount > 0 ?
-                            `${filteredIncomes.length} ta filtrlangan tranzaksiya` :
-                            `Jami ${incomes.length} ta tranzaksiya`}
-                    </p>
-                </div>
-            </div>
-
-            {/* ✅ Kirimlar ro'yxati */}
-            <div className="px-6 mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-200">Kirimlar ro'yxati</h3>
-                    <span className="text-sm text-gray-400">{filteredIncomes.length} ta</span>
-                </div>
-
-                {filteredIncomes.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="text-6xl mb-4">🔍</div>
-                        <h3 className="text-xl font-semibold text-gray-300 mb-2">Natija topilmadi</h3>
-                        <p className="text-gray-400">Tanlangan filtrlar bo'yicha kirimlar topilmadi</p>
-                        <button
-                            onClick={resetFilters}
-                            className="mt-4 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-xl transition-colors"
-                        >
-                            Filtrlarni tozalash
-                        </button>
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                {/* Total Income */}
+                <div className="p-6">
+                    <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-3xl p-6 shadow-2xl">
+                        <h2 className="text-4xl font-bold text-white mb-2">
+                            {loading ? "Yuklanmoqda..." : formatCurrency(totalIncome)}
+                        </h2>
+                        <p className="text-emerald-200">
+                            {activeFiltersCount > 0 ?
+                                `${filteredIncomes.length} ta filtrlangan tranzaksiya` :
+                                `Jami ${incomes.length} ta tranzaksiya`}
+                        </p>
                     </div>
-                ) : (
-                    <div className="space-y-3">
-                        {filteredIncomes.map((income) => (
-                            <div
-                                key={income.id}
-                                className="bg-gray-800/50 rounded-2xl p-4 hover:bg-gray-800/70 transition-colors relative"
+                </div>
+
+                {/* ✅ Kirimlar ro'yxati */}
+                <div className="px-6 mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-200">Kirimlar ro'yxati</h3>
+                        <span className="text-sm text-gray-400">{filteredIncomes.length} ta</span>
+                    </div>
+
+                    {filteredIncomes.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="text-6xl mb-4">🔍</div>
+                            <h3 className="text-xl font-semibold text-gray-300 mb-2">Natija topilmadi</h3>
+                            <p className="text-gray-400">Tanlangan filtrlar bo'yicha kirimlar topilmadi</p>
+                            <button
+                                onClick={resetFilters}
+                                className="mt-4 bg-blue-500 hover:bg-blue-600 px-6 py-2 rounded-xl transition-colors"
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3 mt-1">
-                                        <div className="p-2 bg-emerald-500/20 rounded-xl">
-                                            <TrendingUp size={20} className="text-emerald-400" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-medium text-white">{income.description}</h4>
-                                            <div className="flex items-center space-x-2 text-sm text-gray-400">
-                                                <span>{income.date}</span>
-                                                <span>•</span>
-                                                <span>{income.time}</span>
-                                                <span>•</span>
-                                                <span className="capitalize text-[12px] text-emerald-400 absolute top-0 left-4">{income.category}</span>
+                                Filtrlarni tozalash
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {filteredIncomes.map((income) => (
+                                <div
+                                    key={income.id}
+                                    className="bg-gray-800/50 rounded-2xl p-4 hover:bg-gray-800/70 transition-colors relative"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3 mt-1">
+                                            <div className="p-2 bg-emerald-500/20 rounded-xl">
+                                                <TrendingUp size={20} className="text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-white">{income.description}</h4>
+                                                <div className="flex items-center space-x-2 text-sm text-gray-400">
+                                                    <span>{income.date}</span>
+                                                    <span>•</span>
+                                                    <span>{income.time}</span>
+                                                    <span>•</span>
+                                                    <span className="capitalize text-[12px] text-emerald-400 absolute top-0 left-4">{income.category}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center space-x-3">
-                                        <div className="text-lg font-semibold text-emerald-400">
-                                            +{formatCurrency(income.amount)}
+                                        <div className="flex items-center space-x-3">
+                                            <div className="text-lg font-semibold text-emerald-400">
+                                                +{formatCurrency(income.amount)}
+                                            </div>
+                                            <button
+                                                onClick={() => setOpenMenuId(openMenuId === income.id ? null : income.id)}
+                                                className="p-2 hover:bg-gray-700 rounded-xl"
+                                            >
+                                                <MoreVertical size={20} className="text-gray-400" />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => setOpenMenuId(openMenuId === income.id ? null : income.id)}
-                                            className="p-2 hover:bg-gray-700 rounded-xl"
-                                        >
-                                            <MoreVertical size={20} className="text-gray-400" />
-                                        </button>
                                     </div>
-                                </div>
 
-                                {/* ✅ Delete menyusi */}
-                                {openMenuId === income.id && (
-                                    <div className="absolute right-4 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-lg w-32 z-50">
-                                        <button
-                                            onClick={() => handleDeleteIncome(income.id)}
-                                            className="flex items-center space-x-2 w-full text-red-500 hover:bg-gray-800 px-4 py-2 rounded-xl"
-                                        >
-                                            <Trash2 size={18} />
-                                            <span>O'chirish</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                                    {/* ✅ Delete menyusi */}
+                                    {openMenuId === income.id && (
+                                        <div className="absolute right-4 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-lg w-32 z-50">
+                                            <button
+                                                onClick={() => handleDeleteIncome(income.id)}
+                                                className="flex items-center space-x-2 w-full text-red-500 hover:bg-gray-800 px-4 py-2 rounded-xl"
+                                            >
+                                                <Trash2 size={18} />
+                                                <span>O'chirish</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
             </div>
 
             {/* ✅ Filter Modal */}

@@ -83,3 +83,29 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+
+
+/* Floating animation (doimiy tebranish) */
+@keyframes floating {
+  0% {
+    transform: translateY(0px) rotateY(0deg) rotateX(0deg);
+  }
+
+  50% {
+    transform: translateY(-8px) rotateY(3deg) rotateX(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotateY(0deg) rotateX(0deg);
+  }
+}
+
+.animate-floating {
+  animation: floating 4s ease-in-out infinite;
+}
+
+/* 3D hover effekt */
+.perspective-1000 {
+  perspective: 1000px;
+}

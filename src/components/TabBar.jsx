@@ -1,7 +1,14 @@
 "use client";
 
 import React from "react";
-import { Home, TrendingUp, TrendingDown, Briefcase, CreditCard } from "lucide-react"; // CreditCard ikonasi qarzlar uchun
+import {
+    Home,
+    TrendingUp,
+    TrendingDown,
+    Briefcase,
+    CreditCard,
+    Dumbbell, // Gym uchun ikonka
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
 const TabBar = () => {
@@ -13,7 +20,8 @@ const TabBar = () => {
         { path: "/income", icon: TrendingUp, label: "Kirim", color: "text-emerald-400" },
         { path: "/expense", icon: TrendingDown, label: "Chiqim", color: "text-red-400" },
         { path: "/reports", icon: Briefcase, label: "Ishlar", color: "text-purple-400" },
-        { path: "/debts", icon: CreditCard, label: "Qarzlar", color: "text-yellow-400" }, // yangi bo'lim
+        { path: "/debts", icon: CreditCard, label: "Qarzlar", color: "text-yellow-400" },
+        { path: "/gym", icon: Dumbbell, label: "Gym", color: "text-lime-400" }, // yangisi: sport uchun to‘q yashil rang
     ];
 
     return (
@@ -25,11 +33,13 @@ const TabBar = () => {
                         <button
                             key={path}
                             onClick={() => router.push(path)}
-                            className={`flex flex-col items-center space-y-1 p-1 sm:p-2 rounded-xl text-xs sm:text-sm transition-all duration-300 ${isActive ? `${color} bg-white/10` : "text-gray-500 hover:text-gray-400"
-                                }`}
+                            className={`flex flex-col items-center space-y-1 p-1 sm:p-2 rounded-xl 
+              text-[10px] sm:text-xs transition-all duration-300 
+              ${isActive ? `${color} bg-white/10` : "text-gray-500 hover:text-gray-400"}`}
                         >
-                            <Icon size={22} />
-                            <span>{label}</span>
+                            <Icon size={22} className="sm:size-[24px]" />
+                            <span className="hidden sm:block">{label}</span>
+                            <span className="block sm:hidden text-[10px]">{label}</span>
                         </button>
                     );
                 })}

@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import TabBar from "../components/TabBar";
+import DeviceGuard from "../components/DeviceGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +17,7 @@ export const metadata = {
   title: "Hikari",
   description: "Moliyaviy boshqaruv uchun Next.js ilovasi",
   icons: {
-    icon: "https://i.pinimg.com/736x/ed/e6/4c/ede64c636b9e4892a462dd6f76f1d07d.jpg", // public/logo.jpg
+    icon: "https://i.pinimg.com/736x/f4/23/b5/f423b57479009fe7057ab06bebafc6ed.jpg",
   },
 };
 
@@ -24,10 +25,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="uz" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white`}
       >
-        <div className="pb-20">{children}</div>
-        <TabBar />
+        <DeviceGuard>
+          <div className="pb-20">{children}</div>
+          <TabBar />
+        </DeviceGuard>
       </body>
     </html>
   );

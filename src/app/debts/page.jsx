@@ -229,12 +229,15 @@ const DebtsPage = () => {
                                     <h4 className="font-medium text-white">{debt.name}</h4>
                                     <div className="flex items-center space-x-2 text-sm text-gray-400">
                                         <span>{debt.date}</span>
+
                                         <span className={`px-2 py-1 text-xs rounded-xl ${debt.status === "to'langan"
                                             ? "bg-green-500/30 text-green-400"
                                             : "bg-yellow-500/30 text-yellow-400"
                                             }`}>
                                             {debt.status === "to'langan" ? "To'langan" : "Qoldiq"}
                                         </span>
+                                        <div className="text-lg absolute right-6 bottom-5 font-semibold text-green-400">{formatCurrency(debt.amount)}</div>
+
                                     </div>
                                 </div>
 
